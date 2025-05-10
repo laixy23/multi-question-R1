@@ -1,0 +1,283 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-btn');
+    const modelSelector = document.querySelector('.model-selector');
+
+    // 加载MathJax
+    loadMathJax();
+
+    // 设置用户名称
+    updateUserName("用户");
+
+    // 添加初始的欢迎消息
+    addAssistantMessage("你好！有什么我可以帮助你的吗？", null);
+
+    // 自动调整文本区域高度
+    userInput.addEventListener('input', () => {
+        userInput.style.height = 'auto';
+        userInput.style.height = (userInput.scrollHeight) + 'px';
+    });
+
+    // 加载MathJax库
+    function loadMathJax() {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        script.async = true;
+        script.id = 'MathJax-script';
+        document.head.appendChild(script);
+
+        // 配置MathJax
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            },
+            startup: {
+                typeset: false
+            }
+        };
+    }
+
+    // 渲染页面中的数学公式
+    function renderMath() {
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            window.MathJax.typesetPromise().catch(err => console.error('MathJax error:', err));
+        } else {
+            setTimeout(renderMath, 500); // 如果MathJax还没加载完成，等待后重试
+        }
+    }
+
+    // 发送聊天消息的事件处理
+    function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        // 添加用户消息到聊天窗口
+        addUserMessage(message);
+
+        // 清空输入框并重置高度
+        userInput.value = '';
+        userInput.style.height = 'auto';
+
+        // 显示加载状态
+        const loadingElement = addLoadingMessage();
+
+        // 发送请求到后端
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                // 移除加载状态
+                loadingElement.remove();
+
+                // 添加助手回复
+                if (data.error) {
+                    addErrorMessage(data.error);
+                } else {
+                    addAssistantMessage(data.answer, data.reasoning);
+                }
+
+                // 滚动到底部
+                scrollToBottom();
+            })
+            .catch(error => {
+                // 移除加载状态
+                loadingElement.remove();
+
+                // 添加错误消息
+                addErrorMessage('发生错误，请稍后再试：' + error.message);
+
+                // 滚动到底部
+                scrollToBottom();
+            });
+    }
+
+    // 更新用户名
+    function updateUserName(name) {
+        const userNameElements = document.querySelectorAll('.user-name');
+        userNameElements.forEach(elem => {
+            elem.textContent = name;
+        });
+    }
+
+    // 添加用户消息
+    function addUserMessage(message) {
+        // 创建消息元素
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message user-message';
+        messageElement.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">用</div>
+                <div class="message-from">你</div>
+            </div>
+            <div class="message-content">${escapeHtml(message)}</div>
+        `;
+
+        // 添加到聊天容器
+        chatContainer.appendChild(messageElement);
+
+        // 滚动到底部
+        scrollToBottom();
+    }
+
+    // 添加助手消息
+    function addAssistantMessage(message, reasoning) {
+        // 创建消息元素
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message assistant-message';
+
+        // 构建消息内容HTML
+        let contentHTML = `
+            <div class="message-header">
+                <div class="message-avatar">AI</div>
+                <div class="message-from">智能助手</div>
+            </div>
+            <div class="message-content">
+                ${processMessageText(message)}
+            </div>
+        `;
+
+        // 如果有推理过程，添加详细信息按钮和推理内容
+        if (reasoning) {
+            contentHTML += `
+                <div class="message-details">
+                    <button class="details-toggle">查看推理过程 <span class="arrow">▼</span></button>
+                    <div class="details-content" style="display: none;">
+                        ${processMessageText(reasoning)}
+                    </div>
+                </div>
+            `;
+        }
+
+        messageElement.innerHTML = contentHTML;
+
+        // 添加到聊天容器
+        chatContainer.appendChild(messageElement);
+
+        // 为详细信息按钮添加事件监听器
+        if (reasoning) {
+            const toggleButton = messageElement.querySelector('.details-toggle');
+            const detailsContent = messageElement.querySelector('.details-content');
+
+            toggleButton.addEventListener('click', () => {
+                const isVisible = detailsContent.style.display !== 'none';
+                detailsContent.style.display = isVisible ? 'none' : 'block';
+                toggleButton.querySelector('.arrow').textContent = isVisible ? '▼' : '▲';
+
+                // 渲染新显示的数学公式
+                if (!isVisible) {
+                    renderMath();
+                }
+
+                // 滚动到底部
+                scrollToBottom();
+            });
+        }
+
+        // 渲染数学公式
+        renderMath();
+    }
+
+    // 添加错误消息
+    function addErrorMessage(error) {
+        // 创建消息元素
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message assistant-message';
+        messageElement.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar" style="background-color: #ff5252;">!</div>
+                <div class="message-from">错误</div>
+            </div>
+            <div class="message-content" style="color: #d32f2f;">
+                ${escapeHtml(error)}
+            </div>
+        `;
+
+        // 添加到聊天容器
+        chatContainer.appendChild(messageElement);
+    }
+
+    // 添加加载消息
+    function addLoadingMessage() {
+        // 创建加载元素
+        const loadingElement = document.createElement('div');
+        loadingElement.className = 'message loading';
+        loadingElement.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">AI</div>
+                <div class="message-from">智能助手</div>
+            </div>
+            <div class="loading-dots">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+        `;
+
+        // 添加到聊天容器
+        chatContainer.appendChild(loadingElement);
+
+        // 滚动到底部
+        scrollToBottom();
+
+        return loadingElement;
+    }
+
+    // 处理消息文本（添加换行等）
+    function processMessageText(text) {
+        if (!text) return '';
+
+        // 首先转义HTML
+        let processed = escapeHtml(text);
+        
+        // 恢复数学公式标记
+        processed = processed.replace(/&lt;math-inline&gt;(.*?)&lt;\/math-inline&gt;/g, function(match, formula) {
+            return '$' + formula + '$';
+        });
+        
+        processed = processed.replace(/&lt;math-display&gt;(.*?)&lt;\/math-display&gt;/g, function(match, formula) {
+            return '\\[' + formula + '\\]';
+        });
+        
+        // 处理换行符
+        processed = processed.replace(/\n/g, '<br>');
+
+        return processed;
+    }
+
+    // HTML转义函数
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 滚动到底部
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 添加聊天相关事件监听器
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // 为模型选择器添加点击事件
+    modelSelector.addEventListener('click', () => {
+        alert('模型选择功能尚未实现');
+    });
+}); 

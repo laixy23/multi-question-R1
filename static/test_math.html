@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Math Formula Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                packages: ['base', 'ams', 'noerrors', 'noundefined']
+            }
+        };
+        
+        function testProcessing() {
+            const input = document.getElementById('formula-input').value;
+            
+            // 模拟后端处理
+            let processed = input
+                .replace(/(\$)(.*?)(\$)/g, '__MATH_INLINE__$2__MATH_INLINE_END__')
+                .replace(/(\$\$)(.*?)(\$\$)/g, '__MATH_DISPLAY__$2__MATH_DISPLAY_END__')
+                .replace(/(\\\[)(.*?)(\\\])/g, '__MATH_DISPLAY__$2__MATH_DISPLAY_END__')
+                .replace(/(\\\()(.*?)(\\\))/g, '__MATH_INLINE__$2__MATH_INLINE_END__');
+                
+            document.getElementById('processed-output').textContent = processed;
+            
+            // 模拟前端处理
+            processed = processed
+                .replace(/\_\_MATH\_INLINE\_\_(.*?)\_\_MATH\_INLINE\_END\_\_/g, '\\($1\\)')
+                .replace(/\_\_MATH\_DISPLAY\_\_(.*?)\_\_MATH\_DISPLAY\_END\_\_/g, '\\[$1\\]');
+                
+            document.getElementById('frontend-output').innerHTML = processed;
+            
+            // 渲染公式
+            MathJax.typesetPromise().catch(err => console.error('MathJax error:', err));
+        }
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        pre { background-color: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>数学公式测试页面</h1>
+    
+    <div class="section">
+        <h2>输入测试公式</h2>
+        <textarea id="formula-input" placeholder="输入包含数学公式的文本...">这是一个行内公式 $E=mc^2$ 和一个行间公式 $$\int_{a}^{b} f(x) \, dx$$，还有另一种行内公式 \(y = x^2\) 和行间公式 \[\sum_{i=1}^{n} i = \frac{n(n+1)}{2}\]</textarea>
+        <button onclick="testProcessing()">测试处理</button>
+    </div>
+    
+    <div class="section">
+        <h2>模拟后端处理结果</h2>
+        <pre id="processed-output"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>模拟前端渲染结果</h2>
+        <div id="frontend-output"></div>
+    </div>
+    
+    <div class="section">
+        <h2>常见数学公式例子</h2>
+        <ul>
+            <li>行内公式: $E=mc^2$</li>
+            <li>行间公式: $$\int_{a}^{b} f(x) \, dx$$</li>
+            <li>其他行内语法: \(y = x^2\)</li>
+            <li>其他行间语法: \[\sum_{i=1}^{n} i = \frac{n(n+1)}{2}\]</li>
+        </ul>
+    </div>
+
+    <script>
+        // 初始渲染页面上的公式
+        MathJax.typesetPromise().catch(err => console.error('MathJax error:', err));
+    </script>
+</body>
+</html> 

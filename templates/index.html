@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 助手</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 数学公式样式 */
+        .mjx-chtml {
+            font-size: 110% !important;
+            margin: 8px 0 !important;
+        }
+        .mjx-math {
+            padding: 3px 0 !important;
+        }
+        .MathJax_Display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%;
+        }
+        
+        /* 多输入模式样式 */
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: flex-start;
+        }
+        .input-buttons {
+            display: flex;
+            margin-top: 10px;
+            justify-content: space-between;
+        }
+        .add-input-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .remove-input-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        .multi-submit-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        #input-fields-container {
+            width: 100%;
+        }
+        .multi-mode-toggle {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .multi-mode-toggle label {
+            margin-left: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="greeting">
+                <div class="flower-icon">✻</div>
+                <h1>嗨！有什么可以帮忙的吗？</h1>
+            </div>
+        </div>
+        
+        <div class="chat-container" id="chat-container">
+            <!-- 聊天消息将在这里动态生成 -->
+        </div>
+        
+        <div class="input-area">
+            <!-- 单问题模式 -->
+            <div class="input-container" id="single-input-container">
+                <textarea id="user-input" placeholder="有什么我能帮到你的？" rows="1"></textarea>
+                <div class="input-status">
+                    <div class="typing-dot"></div>
+                </div>
+                <div class="model-selector">
+                    <span>deepseek-r1</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <button id="send-btn" class="send-button" onclick="sendMessage()">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+            </div>
+            
+            <!-- 多问题模式 -->
+            <div class="input-container" id="multi-input-container" style="display: none;">
+                <div id="input-fields-container">
+                    <div class="input-group">
+                        <textarea class="multi-input" placeholder="输入您的前提或问题..." rows="1"></textarea>
+                        <button class="remove-input-btn" onclick="removeInputField(this)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-buttons">
+                    <button class="add-input-btn" onclick="addInputField()">
+                        <i class="fas fa-plus"></i> 添加前置知识
+                    </button>
+                    <button class="multi-submit-btn" onclick="submitMultipleQuestions()">提交所有</button>
+                </div>
+            </div>
+            
+            <!-- 模糊问题按钮 -->
+            <div class="fuzzy-question-container">
+                <button id="fuzzy-question-btn" class="fuzzy-question-btn">模糊问题</button>
+            </div>
+            
+            <!-- 切换按钮 -->
+            <div class="multi-mode-toggle">
+                <input type="checkbox" id="multi-mode-checkbox" onchange="toggleInputMode()">
+                <label for="multi-mode-checkbox">多输入模式</label>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html> 

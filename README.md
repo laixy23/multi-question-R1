@@ -79,42 +79,8 @@ python app.py
 - 点击"模糊问题"快速插入模糊问题模板
 - 点击"查看推理过程"了解AI的思考过程
 
-## API接口
-
-### 单问题对话
-- **端点**: `/api/chat`
-- **方法**: POST
-- **请求体**:
-  ```json
-  {
-    "message": "你的问题",
-    "new_conversation": false
-  }
-  ```
-
-### 多问题批量处理
-- **端点**: `/api/multi-ask`
-- **方法**: POST
-- **请求体**:
-  ```json
-  {
-    "questions": ["问题1", "问题2", "问题3"],
-    "use_context": true
-  }
-  ```
-
-### 创建新对话
-- **端点**: `/api/new-conversation`
-- **方法**: POST
-
-### 获取可用模型
-- **端点**: `/api/models`
-- **方法**: GET
 
 ## 自定义与扩展
-
-### 添加新模型
-编辑`app.py`中的`get_available_models`函数添加新的模型选项。
 
 ### 调整服务端口
 修改`app.py`文件末尾的端口配置:

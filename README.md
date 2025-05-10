@@ -26,7 +26,7 @@
 
 - Python 3.7+
 - Flask 2.3.3+
-- OpenAI 1.77.0+
+- OpenAI 1.77.0
 
 ### 安装步骤
 

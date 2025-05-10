@@ -126,6 +126,3 @@ app.run(debug=True, host='0.0.0.0', port=5004)
 
 如有问题或建议，请通过Issues提交反馈。欢迎提交Pull Request贡献代码。
 
-## 许可
-
-[添加您的许可信息] 

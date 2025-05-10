@@ -507,6 +507,7 @@ function submitMultipleQuestions() {
     const chatContainer = document.getElementById('chat-container');
     const textareas = document.querySelectorAll('#input-fields-container .multi-input');
     const questions = Array.from(textareas).map(textarea => textarea.value.trim());
+    const useContext = document.getElementById('context-mode-checkbox').checked;
 
     // 验证所有问题都不为空
     if (questions.some(q => !q)) {
@@ -549,109 +550,94 @@ function submitMultipleQuestions() {
         </div>
     `;
     chatContainer.appendChild(loadingElement);
-
-    // 滚动到底部
     scrollToBottom();
-
-    // 记录开始时间
-    const requestStartTime = performance.now();
 
     // 发送请求
     fetch('/api/multi-ask', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ questions: questions })
+        body: JSON.stringify({
+            questions: questions,
+            use_context: useContext // 使用复选框的状态
+        }),
     })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('服务器响应错误');
+    .then(response => response.json())
+    .then(data => {
+        // 移除加载消息
+        chatContainer.removeChild(loadingElement);
+
+        if (data.error) {
+            addErrorMessage(data.error);
+            return;
+        }
+
+        // 处理响应
+        if (data.use_context) {
+            // 上下文模式，显示单个综合回答
+            if (data.responses && data.responses.length > 0) {
+                const response = data.responses[0];
+                addAssistantMessage(response.answer, response.reasoning);
             }
-            return response.json();
-        })
-        .then(data => {
-            // 计算响应时间
-            const responseTime = ((performance.now() - requestStartTime) / 1000).toFixed(2);
-            
-            // 移除加载消息
-            loadingElement.remove();
-
-            // 展示所有回答
-            data.forEach((response, index) => {
-                const answerElement = document.createElement('div');
-                answerElement.className = 'message assistant-message';
-
-                let answerHtml = `
-                <div class="message-header">
-                    <div class="message-avatar">AI</div>
-                    <div class="message-from">回答 ${index + 1}</div>
-                </div>
-                <div class="message-content">${processMessageText(response.answer)}</div>
-            `;
-
-                if (response.reasoning) {
-                    const timeDisplay = responseTime ? `<span class="response-time">(耗时: ${responseTime}秒)</span>` : '';
-                    answerHtml += `
-                    <div class="message-details">
-                        <button class="details-toggle">查看推理过程 ${timeDisplay} <span class="arrow">▼</span></button>
-                        <div class="details-content" style="display: none;">
-                            ${processMessageText(response.reasoning)}
+        } else {
+            // 非上下文模式，显示多个独立回答
+            if (data.responses && data.responses.length > 0) {
+                data.responses.forEach((response, index) => {
+                    const responseElement = document.createElement('div');
+                    responseElement.className = 'message assistant-message multi-response';
+                    
+                    let responseHtml = `
+                        <div class="message-header">
+                            <div class="message-avatar">AI</div>
+                            <div class="message-from">回答 ${index + 1}</div>
                         </div>
-                    </div>
-                `;
-                }
-
-                answerElement.innerHTML = answerHtml;
-                chatContainer.appendChild(answerElement);
-
-                // 为详细信息按钮添加事件监听器
-                if (response.reasoning) {
-                    const toggleButton = answerElement.querySelector('.details-toggle');
-                    const detailsContent = answerElement.querySelector('.details-content');
-
-                    toggleButton.addEventListener('click', () => {
-                        const isVisible = detailsContent.style.display !== 'none';
-                        detailsContent.style.display = isVisible ? 'none' : 'block';
-                        toggleButton.querySelector('.arrow').textContent = isVisible ? '▼' : '▲';
-                        
-                        // 渲染新显示的数学公式
-                        if (!isVisible && window.renderMath) {
-                            window.renderMath();
-                        }
-                        
-                        scrollToBottom();
-                    });
-                }
-            });
-
-            // 渲染数学公式
-            if (window.renderMath) {
-                window.renderMath();
+                        <div class="message-content">
+                    `;
+                    
+                    // 添加原问题
+                    responseHtml += `<div class="original-question">问题: ${escapeHtml(response.question)}</div>`;
+                    
+                    // 如果有推理过程，添加推理过程
+                    if (response.reasoning) {
+                        responseHtml += `
+                            <div class="reasoning-toggle">
+                                <button class="reasoning-btn" onclick="this.parentElement.nextElementSibling.classList.toggle('show')">
+                                    查看推理过程 <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div class="reasoning-content">
+                                ${processMessageText(response.reasoning)}
+                            </div>
+                        `;
+                    }
+                    
+                    // 添加回答
+                    responseHtml += `<div class="answer-content">${processMessageText(response.answer)}</div>`;
+                    responseHtml += `</div>`;
+                    
+                    responseElement.innerHTML = responseHtml;
+                    chatContainer.appendChild(responseElement);
+                });
             }
+        }
 
-            // 滚动到底部
-            scrollToBottom();
-        })
-        .catch(error => {
-            // 移除加载消息
-            loadingElement.remove();
-
-            // 添加错误消息
-            const errorElement = document.createElement('div');
-            errorElement.className = 'message assistant-message';
-            errorElement.innerHTML = `
-            <div class="message-header">
-                <div class="message-avatar" style="background-color: #ff5252;">!</div>
-                <div class="message-from">错误</div>
-            </div>
-            <div class="message-content" style="color: #d32f2f;">
-                发生错误: ${escapeHtml(error.message)}
-            </div>
-        `;
-            chatContainer.appendChild(errorElement);
-
-            // 滚动到底部
-            scrollToBottom();
+        // 清空输入框
+        textareas.forEach(textarea => {
+            textarea.value = '';
+            textarea.style.height = 'auto';
         });
+
+        scrollToBottom();
+        renderMath();
+    })
+    .catch(error => {
+        // 移除加载消息
+        if (loadingElement.parentNode === chatContainer) {
+            chatContainer.removeChild(loadingElement);
+        }
+        
+        console.error('发送请求时出错:', error);
+        addErrorMessage('发送请求时出错，请稍后再试。');
+    });
 } 
